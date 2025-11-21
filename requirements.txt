@@ -12,7 +12,8 @@ langchain-anthropic==1.1.0
 langchain-groq==1.0.1
 
 langchain-mcp-adapters==0.1.13
-mcp==1.21.2
+mcp==1.22.0
+mcp[cli]==1.22.0
 tavily-python==0.7.13
 langgraph-checkpoint-sqlite==3.0.0
 aiosqlite==0.21.0
@@ -21,3 +22,4 @@ rich==14.2.0
 prompt_toolkit==3.0.52
 
 Nuitka==2.8.6
+pyinstaller==6.16.0

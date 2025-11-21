@@ -1,0 +1,131 @@
+name: Build Captain CMD Tools (PyInstaller)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: PyInstaller build on ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Windows x64
+            os: windows-latest
+            arch: x64
+            artifact_name: captain-cmd-windows-x64-pyinstaller
+            package_ext: zip
+          - name: Linux x64
+            os: ubuntu-latest
+            arch: x64
+            artifact_name: captain-cmd-linux-x64-pyinstaller
+            package_ext: tar.gz
+          - name: macOS x64
+            os: macos-13
+            arch: x64
+            artifact_name: captain-cmd-macos-x64-pyinstaller
+            package_ext: tar.gz
+          - name: macOS ARM64
+            os: macos-latest
+            arch: arm64
+            artifact_name: captain-cmd-macos-arm64-pyinstaller
+            package_ext: tar.gz
+        python-version: ['3.13']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # Windows
+    - name: Setup ccache (Windows)
+      if: runner.os == 'Windows'
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ runner.os }}-${{ matrix.platform.arch }}-ccache
+
+    # Linux
+    - name: Install build tools (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ccache patchelf
+
+    # macOS
+    - name: Setup ccache (macOS)
+      if: runner.os == 'macOS'
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ runner.os }}-${{ matrix.platform.arch }}-ccache
+
+    - name: Build with PyInstaller
+      run: python build_with_pyinstaller.py
+
+    - name: List build output (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        dir .build /s
+      shell: cmd
+
+    - name: List build output (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        ls -la .build/
+      shell: bash
+
+    - name: Package artifacts (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd .build
+        if (Test-Path "main.dist") {
+          Rename-Item -Path "main.dist" -NewName "${{ matrix.platform.artifact_name }}"
+          Compress-Archive -Path "${{ matrix.platform.artifact_name }}" -DestinationPath "${{ matrix.platform.artifact_name }}.zip"
+        } elseif (Test-Path "main.app") {
+          Rename-Item -Path "main.app" -NewName "${{ matrix.platform.artifact_name }}"
+          Compress-Archive -Path "${{ matrix.platform.artifact_name }}" -DestinationPath "${{ matrix.platform.artifact_name }}.zip"
+        }
+      shell: pwsh
+
+    - name: Package artifacts (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        cd .build
+        if [ -d "main.dist" ]; then
+          mv main.dist ${{ matrix.platform.artifact_name }}
+          tar -czf ${{ matrix.platform.artifact_name }}.tar.gz ${{ matrix.platform.artifact_name }}
+        fi
+      shell: bash
+
+    - name: Package artifacts (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        cd .build
+        if [ -d "main.app" ]; then
+          mv main.app ${{ matrix.platform.artifact_name }}
+          tar -czf ${{ matrix.platform.artifact_name }}.tar.gz ${{ matrix.platform.artifact_name }}
+        elif [ -d "main.dist" ]; then
+          mv main.dist ${{ matrix.platform.artifact_name }}
+          tar -czf ${{ matrix.platform.artifact_name }}.tar.gz ${{ matrix.platform.artifact_name }}
+        fi
+      shell: bash
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.platform.artifact_name }}
+        path: |
+          .build/${{ matrix.platform.artifact_name }}.${{ matrix.platform.package_ext }}
+        retention-days: 30
+        if-no-files-found: warn
+

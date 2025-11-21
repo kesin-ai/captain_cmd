@@ -19,5 +19,5 @@ content = '''
 model_name = ""
 api_key = ""
 base_url = ""
-tool_names = ["example-stdio-mcp-name", "example-tcp-mcp-name"]
+tool_names = []
 system_prompt = ""
