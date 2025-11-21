@@ -79,7 +79,14 @@ jobs:
     - name: Build with Nuitka
       run: python build.py
 
-    - name: List build output
+    - name: List build output (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        dir .build /s
+      shell: cmd
+
+    - name: List build output (Unix)
+      if: runner.os != 'Windows'
       run: |
         ls -la .build/
       shell: bash

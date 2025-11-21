@@ -9,7 +9,6 @@ if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
     except AttributeError:
-        # Python < 3.7
         import io
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -146,7 +145,6 @@ def post_build():
     
     if not os.path.exists(dist_dir):
         print(f"    [WARNING] Dist directory {dist_dir} not found. Did the build fail or using onefile mode?")
-        # 回退尝试直接在 .build 中找（兼容 onefile）
         dist_dir = ".build"
 
     # 查找示例配置文件
