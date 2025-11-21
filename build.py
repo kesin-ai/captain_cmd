@@ -4,17 +4,26 @@ import shutil
 import platform
 import subprocess
 
+# 设置标准输出为 UTF-8（Windows 兼容性）
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+    except AttributeError:
+        # Python < 3.7
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 def clean():
     """清理之前的构建文件"""
-    print("🧹 Cleaning up previous builds...")
+    print("[*] Cleaning up previous builds...")
     dirs_to_remove = [".build", "build", "main.build", "main.dist", "main.onefile-build"]
     for d in dirs_to_remove:
         if os.path.exists(d):
             try:
                 shutil.rmtree(d)
-                print(f"   Removed {d}")
+                print(f"    Removed {d}")
             except Exception as e:
-                print(f"   Failed to remove {d}: {e}")
+                print(f"    Failed to remove {d}: {e}")
 
 def get_os_specific_flags():
     """获取特定操作系统的 Nuitka 参数"""
@@ -37,7 +46,7 @@ def get_os_specific_flags():
 
 def build():
     """执行 Nuitka 构建"""
-    print("🚀 Starting Nuitka build...")
+    print("[+] Starting Nuitka build...")
     
     output_dir = ".build"
     
@@ -84,17 +93,17 @@ def build():
     cmd.append("main.py")
 
     # 打印并执行命令
-    print(f"📝 Command: {' '.join(cmd)}")
+    print(f"[>] Command: {' '.join(cmd)}")
     try:
         subprocess.check_call(cmd)
-        print("✅ Build finished successfully!")
+        print("[SUCCESS] Build finished successfully!")
     except subprocess.CalledProcessError as e:
-        print("❌ Build failed!")
+        print("[ERROR] Build failed!")
         sys.exit(1)
 
 def post_build():
     """构建后处理：复制配置文件等"""
-    print("📦 Running post-build tasks...")
+    print("[*] Running post-build tasks...")
     
     dist_dir = ".build"
     
@@ -111,20 +120,20 @@ def post_build():
         target_config = os.path.join(dist_dir, "config.toml")
         try:
             shutil.copy2(source_config, target_config)
-            print(f"   Copied template '{source_config}' to '{target_config}'")
+            print(f"    Copied template '{source_config}' to '{target_config}'")
         except Exception as e:
-            print(f"   Failed to copy config file: {e}")
+            print(f"    Failed to copy config file: {e}")
     else:
-        print(f"   ⚠️ Warning: No example config file found (checked: {possible_configs})")
+        print(f"    [WARNING] No example config file found: {possible_configs}")
 
-    print(f"\n✨ All done! executable is in '{dist_dir}' folder.")
+    print(f"\n[DONE] All done! executable is in '{dist_dir}' folder.")
 
 if __name__ == "__main__":
     # 确保安装了 Nuitka
     try:
         import nuitka
     except ImportError:
-        print("❌ Nuitka not installed. Installing...")
+        print("[*] Nuitka not installed. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "nuitka", "zstandard"])
 
     clean()
