@@ -76,8 +76,8 @@ jobs:
     - name: List build output (Windows)
       if: runner.os == 'Windows'
       run: |
-        dir .build /s
-      shell: cmd
+        Get-ChildItem -Path .build -Recurse
+      shell: pwsh
 
     - name: List build output (Unix)
       if: runner.os != 'Windows'
