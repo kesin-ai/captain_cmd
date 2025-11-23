@@ -52,11 +52,23 @@ def prepare_compiler_environment():
         existing = env.get("CL", "")
         if zm_flag not in existing:
             env["CL"] = f"{zm_flag} {existing}".strip()
-            print(f"[*] Added '{zm_flag}' to CL environment to expand MSVC heap")
+            env["CCFLAGS"] = f"{zm_flag} {env.get('CCFLAGS', '')}".strip()
+            env["CXXFLAGS"] = f"{zm_flag} {env.get('CXXFLAGS', '')}".strip()
+            print(f"[*] Added '{zm_flag}' to CL/CCFLAGS/CXXFLAGS environment to expand MSVC heap")
     return env
 def build():
     """执行 Nuitka 构建"""
     print("[+] Starting Nuitka build...")
+
+    if platform.system() == "Windows":
+        cl_path = shutil.which("cl")
+        if cl_path:
+            print(f"[*] Found compiler at: {cl_path}")
+            if "Hostx86" in cl_path or "HostX86" in cl_path:
+                 print("    [WARNING] Detected 32-bit host compiler. This may cause out of memory errors (C1002).")
+                 print("              Please use 'x64 Native Tools Command Prompt' for VS.")
+        else:
+            print("[*] Compiler 'cl.exe' not found in PATH. Nuitka will try to locate it.")
     
     output_dir = ".build"
     main_file = "main.py"
@@ -64,12 +76,14 @@ def build():
     cmd = [
         sys.executable, "-m", "nuitka",
         "--standalone",           # 独立环境，不依赖系统 Python
-        # "--onefile",              # 打包成单文件 (已注释，使用文件夹模式)
+        # "--onefile",              # 打包成单文件
         "--assume-yes-for-downloads", # 自动下载必要的编译器/依赖
         f"--output-dir={output_dir}", # 输出目录
         "--remove-output",        # 构建后删除临时文件
         "--show-progress",        # 显示进度条
         "--show-memory",          # 显示内存使用
+        "--disable-ccache",       # 禁用 ccache/clcache (避免缓存导致的问题)
+        "--jobs=4",               # 使用 4 个并发任务（既能减少内存压力，又比 1 快）
         
         # ====== 让 Nuitka 自动追踪所有导入 ======
         "--follow-imports",       # 跟踪所有导入（这是关键！）
